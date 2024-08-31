@@ -1,0 +1,23 @@
+{
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "cSpell.words": [
+    "autocannon",
+    "cmds",
+    "DAST",
+    "deserialised",
+    "IESG",
+    "keyevent",
+    "kysely",
+    "lpush",
+    "refs",
+    "sadd",
+    "SAST",
+    "setex",
+    "smembers",
+    "srem",
+    "Taskfile"
+  ]
+}

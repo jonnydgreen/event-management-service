@@ -1,0 +1,20 @@
+version: '3'
+
+tasks:
+  start:
+    deps: [setup]
+    cmds:
+      - docker compose up --build
+  setup:
+    cmds:
+      - npm install
+  check:
+    deps: [setup]
+    cmds:
+      - npm run build
+      - npm run lint
+      - npm run test:int
+  test:int:
+    deps: [setup]
+    cmds:
+      - npm run test:int -- {{.CLI_ARGS}}
