@@ -1,6 +1,6 @@
 import { SetupTestsTeardown } from '@nifty-lil-tricks/testing';
 import { AppModule } from '../../src/app.module';
-import { CreateEventDto } from '../../src/event/event.model';
+import { CreateEventDto, Seat } from '../../src/event/event.model';
 import {
   createAuthenticatedHeaders,
   createEvent,
@@ -53,5 +53,14 @@ describe('Create Event', () => {
     // Assert
     expect(response.status).toBe(200);
     expect(json).toHaveLength(createEventBody.numberOfSeats);
+    let count = 1;
+    for (const seat of json) {
+      expect(seat).toEqual<Seat>({
+        id: expect.any(String),
+        number: count,
+        eventId,
+      });
+      count++;
+    }
   });
 });

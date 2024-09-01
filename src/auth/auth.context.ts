@@ -14,6 +14,11 @@ export const Ctx = createParamDecorator(
   },
 );
 
+// In a production system, I would also add the following:
+// - request
+// - log
+// - abort controller
+// - subscribers/publishers
 export interface Context {
   user?: string;
 }

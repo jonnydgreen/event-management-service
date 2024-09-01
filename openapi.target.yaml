@@ -82,10 +82,10 @@ paths:
             application/json:
               # Note: pagination was not chosen here because the maximum number
               # of seats associated with an Event is 1000 which shouldn't provide much load
-              # on the seat. In addition, we always want to return all the seats for an event.
-              # However, if pagination was deemed necessary (including a data-driven
+              # on the endpoint. In addition, we always want to return all the seats for an event.
+              # However, if pagination was deemed necessary (with a data-driven
               # decision), it would be implemented using either offset or cursor-based
-              # pagination, whichever is deemed more appropriate to the use-case.
+              # pagination, whichever is deemed more appropriate for the use-case.
               schema:
                 type: array
                 items:
@@ -122,7 +122,7 @@ paths:
           example: 922fc335-171f-4109-b2b0-5f1826cee53b
       # Notes on design:
       # - I would also implement a forbidden response here because only certain users
-      #   should be able to create events but I have left this out in the interests of time.
+      #   should be able to hold event seats but I have left this out in the interests of time.
       # - To clean things up and also reuse, I could create a series of response refs but
       #   have kept them explicitly defined for the time being
       responses:
@@ -171,7 +171,7 @@ paths:
           example: 922fc335-171f-4109-b2b0-5f1826cee53b
       # Notes on design:
       # - I would also implement a forbidden response here because only certain users
-      #   should be able to create events but I have left this out in the interests of time.
+      #   should be able to reserve event seats but I have left this out in the interests of time.
       # - To clean things up and also reuse, I could create a series of response refs but
       #   have kept them explicitly defined for the time being
       responses:
@@ -211,15 +211,10 @@ components:
     # resource over time such as:
     #  - slug
     #  - createdOn
-    #  - reservedOn
-    #  - reservedBy
     #  - seats
     Event:
       type: object
       properties:
-        # Here `id` is used as it's a common key for out of the box caching.
-        # I've mainly seen this in GraphQL settings but it doesn't hurt to keep
-        # consistency here.
         id:
           type: string
           description: The ID of the Event in UUID format
@@ -248,9 +243,6 @@ components:
     Seat:
       type: object
       properties:
-        # Here `id` is used as it's a common key for out of the box caching.
-        # I've mainly seen this in GraphQL settings but it doesn't hurt to keep
-        # consistency here.
         id:
           type: string
           description: The ID of the Seat in UUID format
@@ -268,6 +260,7 @@ components:
           example: 23
       required:
         - id
+        - eventId
         - number
     # The error shape is determined by the following RFC: https://www.rfc-editor.org/rfc/rfc9457.html
     Error:

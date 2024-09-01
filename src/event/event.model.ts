@@ -52,6 +52,13 @@ export class Seat {
   id!: string;
 
   @ApiProperty({
+    description: 'The number of the Seat',
+    type: () => Number,
+    example: 23,
+  })
+  number!: number;
+
+  @ApiProperty({
     description: 'The Event ID of the Seat in UUID format',
     type: () => String,
     example: 'bf9eec7d-9b97-46b8-9cfb-706a2862520b',

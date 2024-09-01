@@ -28,3 +28,8 @@ search parameters are correct.
 
 If this error occurs, there was an issue with the request. Check the error
 details for more info.
+
+# Event Internal Server Error
+
+If this error occurs, there was an internal issue with the request. Please
+contact the maintainers of the API to resolver this issue.

@@ -52,7 +52,7 @@ describe('Create Event', () => {
       appOrigin,
       eventId,
     );
-    const [seat] = getAvailableSeatsJson1;
+    const [, , , seat] = getAvailableSeatsJson1;
 
     // Act
     const response = await holdSeat(appOrigin, headers, eventId, seat.id);
@@ -82,7 +82,7 @@ describe('Create Event', () => {
       appOrigin,
       eventId,
     );
-    const [seat] = getAvailableSeatsJson1;
+    const [, , seat] = getAvailableSeatsJson1;
 
     // Act
     const response1 = await holdSeat(appOrigin, headers, eventId, seat.id);

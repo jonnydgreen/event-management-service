@@ -1,20 +1,59 @@
 version: '3'
 
 tasks:
+  help:
+    desc: Show the Taskfile help
+    cmds:
+      - task -l
+    silent: true
   start:
+    desc: Start the event management application
     deps: [setup]
     cmds:
       - docker compose up --build
   setup:
+    desc: Setup the repository
     cmds:
       - npm install
   check:
+    desc: Check the source code
     deps: [setup]
     cmds:
       - npm run build
       - npm run lint
       - npm run test:int
   test:int:
+    desc: Run the integration tests
     deps: [setup]
     cmds:
       - npm run test:int -- {{.CLI_ARGS}}
+  call:create_event:
+    desc: Create an event
+    cmds:
+      - >
+        curl -X POST
+        -H 'Authorization: Bearer NmU4NTllMjgtODZjMy00ZWI5LTk2NzQtZjQ4YWM4OWNjMWM1'
+        -H 'content-type: application/json'
+        -d '{"name":"hello","numberOfSeats":15}'
+        http://localhost:3000/v1alpha1/events
+  call:get_available_seats:
+    desc: Get available Seats for an Event
+    cmds:
+      - >
+        curl -X GET
+        -H 'content-type: application/json'
+        http://localhost:3000/v1alpha1/events/{{.EVENT_ID}}/seats
+  call:hold_event_seat_for_user:
+    desc: Hold an available Seat for a User
+    cmds:
+      - >
+        curl -X POST 
+        -H 'Authorization: Bearer NmU4NTllMjgtODZjMy00ZWI5LTk2NzQtZjQ4YWM4OWNjMWM1' 
+        http://localhost:3000/v1alpha1/events/{{.EVENT_ID}}/seats/{{.SEAT_ID}}/hold
+  call:reserve_event_seat_for_user:
+    desc: Permanently reserve an available Seat for a User
+    cmds:
+      - >
+        curl -X POST 
+        -H 'Authorization: Bearer NmU4NTllMjgtODZjMy00ZWI5LTk2NzQtZjQ4YWM4OWNjMWM1' 
+        http://localhost:3000/v1alpha1/events/{{.EVENT_ID}}/seats/{{.SEAT_ID}}/reserve

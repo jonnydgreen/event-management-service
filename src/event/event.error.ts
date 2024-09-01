@@ -1,5 +1,16 @@
 import { AppError, type AppExceptionOptions } from '../errors/error';
 
+export class EventInternalServerError extends AppError {
+  constructor(options?: AppExceptionOptions) {
+    super(
+      'file://docs/errors.md#event-internal-server-error',
+      'Internal Server Error',
+      500,
+      options,
+    );
+  }
+}
+
 export class EventNotFoundError extends AppError {
   constructor(options?: AppExceptionOptions) {
     super(

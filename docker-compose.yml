@@ -29,7 +29,5 @@ services:
       - cache:/data
 
 volumes:
-  pgdata:
-    driver: local
   cache:
     driver: local

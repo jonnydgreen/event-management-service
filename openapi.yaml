@@ -257,12 +257,17 @@ components:
           type: string
           description: The ID of the Seat in UUID format
           example: 958a4b17-fb57-4667-a2bf-82a0924ddbca
+        number:
+          type: number
+          description: The number of the Seat
+          example: 23
         eventId:
           type: string
           description: The Event ID of the Seat in UUID format
           example: bf9eec7d-9b97-46b8-9cfb-706a2862520b
       required:
         - id
+        - number
         - eventId
     NotFoundError:
       type: object

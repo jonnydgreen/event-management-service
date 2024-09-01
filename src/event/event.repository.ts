@@ -1,15 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { Redis } from 'ioredis';
-import { ConfigService } from '../config/config.service';
+import { randomUUID } from 'node:crypto';
+import { basename } from 'node:path';
 import { Context } from '../auth/auth.context';
-import { basename } from 'path';
+import { ConfigService } from '../config/config.service';
 
 export const EventRepositoryProviderToken = Symbol('EventRepository');
 
 // I would normally add doc-strings here for better visibility of what
 // each method is doing.
 export interface EventRepositoryContract {
-  createEvent(ctx: Context, event: Event, seats: string[]): Promise<void>;
+  createEvent(
+    ctx: Context,
+    eventInput: Omit<Event, 'id'>,
+    seats: Omit<Seat, 'id'>[],
+  ): Promise<Event>;
   getAvailableSeatsForEvent(ctx: Context, eventId: string): Promise<Seat[]>;
   holdEventSeatForUser(
     ctx: Context,
@@ -18,11 +23,11 @@ export interface EventRepositoryContract {
     seatId: string,
     expiryInS: number,
   ): Promise<void>;
-  getHeldEventSeatUserId(
+  getHeldEventSeatDetails(
     ctx: Context,
     eventId: string,
     seatId: string,
-  ): Promise<string | undefined>;
+  ): Promise<Reservation | undefined>;
   reserveEventSeatForUser(
     ctx: Context,
     userId: string,
@@ -39,6 +44,13 @@ export interface Event {
 
 export interface Seat {
   id: string;
+  number: number;
+}
+
+export interface Reservation {
+  id: string;
+  userId: string;
+  reservedOn: string;
 }
 
 @Injectable()
@@ -65,12 +77,17 @@ export class EventRepository implements EventRepositoryContract {
 
   async createEvent(
     ctx: Context,
-    event: Event,
-    seats: string[],
-  ): Promise<void> {
+    eventInput: Omit<Event, 'id'>,
+    seats: Omit<Seat, 'id'>[],
+  ): Promise<Event> {
+    const event: Event = { ...eventInput, id: randomUUID() };
     const { id: eventId } = event;
     await this.#redis.set(this.#eventKey(eventId), JSON.stringify(event));
-    await this.#redis.sadd(this.#eventSeatsKey(eventId), ...seats);
+    await this.#redis.sadd(
+      this.#eventSeatsKey(eventId),
+      ...seats.map((s) => JSON.stringify({ ...s, id: randomUUID() })),
+    );
+    return event;
   }
 
   async getReservedEventSeatIds(
@@ -90,20 +107,20 @@ export class EventRepository implements EventRepositoryContract {
     const seats = await this.#redis.smembers(this.#eventSeatsKey(eventId));
     const reservedSeats = await this.getReservedEventSeatIds(ctx, eventId);
     return seats
-      .filter((seat) => !reservedSeats.includes(seat))
-      .map((id) => ({ id }));
+      .map<Seat>((s) => JSON.parse(s))
+      .filter((seat) => !reservedSeats.includes(seat.id));
   }
 
-  async getHeldEventSeatUserId(
+  async getHeldEventSeatDetails(
     ctx: Context,
     eventId: string,
     seatId: string,
-  ): Promise<string | undefined> {
+  ): Promise<Reservation | undefined> {
     const seat = await this.#redis.get(
       this.#reservedEventSeatKey(eventId, seatId),
     );
     if (seat) {
-      return seat;
+      return JSON.parse(seat);
     }
   }
 
@@ -114,10 +131,15 @@ export class EventRepository implements EventRepositoryContract {
     seatId: string,
     expiryInS: number,
   ): Promise<void> {
+    const reservation: Reservation = {
+      id: randomUUID(),
+      userId,
+      reservedOn: new Date().toISOString(),
+    };
     await this.#redis.setex(
       this.#reservedEventSeatKey(eventId, seatId),
       expiryInS,
-      userId,
+      JSON.stringify(reservation),
     );
   }
 

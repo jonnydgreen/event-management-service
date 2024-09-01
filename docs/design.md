@@ -1,13 +1,21 @@
 # Design
 
+## Table of Contents
+
+- [Description](#description)
+- [Requirements](#requirements)
+- [Resources](#resources)
+- [Exploration](#exploration)
+- [Proposed Solution](#proposed-solution)
+
+## Description
+
 > **Note:** before implementing, I would send this design document to the team
 > for async review and if needed an in-person review. Once everyone is happy
 > with the proposed solution, implementation would start.
 
 The main goal is to create a service that supports a busy online reservation
 system using NodeJS, Redis and Docker.
-
-## Requirements
 
 - Define endpoints for the following features:
   - Create an event.
@@ -30,12 +38,17 @@ system using NodeJS, Redis and Docker.
     - A user can complete the reservation of a seat, only if the user is
       “Holding” the relevant seat. After the reservation, this seat becomes
       permanently assigned to the user.
+
+## Requirements
+
+- Define an API spec
 - Ensure strong software architecture
+- Define business logic
 - Explore error handling
 - Explore validation
 - Explore authentication
 - Explore logging and monitoring
-- Defining testing strategies
+- Define testing strategies
 
 ## Resources
 
@@ -151,10 +164,10 @@ paths:
             application/json:
               # Note: pagination was not chosen here because the maximum number
               # of seats associated with an Event is 1000 which shouldn't provide much load
-              # on the seat. In addition, we always want to return all the seats for an event.
-              # However, if pagination was deemed necessary (including a data-driven
+              # on the endpoint. In addition, we always want to return all the seats for an event.
+              # However, if pagination was deemed necessary (with a data-driven
               # decision), it would be implemented using either offset or cursor-based
-              # pagination, whichever is deemed more appropriate to the use-case.
+              # pagination, whichever is deemed more appropriate for the use-case.
               schema:
                 type: array
                 items:
@@ -191,7 +204,7 @@ paths:
           example: 922fc335-171f-4109-b2b0-5f1826cee53b
       # Notes on design:
       # - I would also implement a forbidden response here because only certain users
-      #   should be able to create events but I have left this out in the interests of time.
+      #   should be able to hold event seats but I have left this out in the interests of time.
       # - To clean things up and also reuse, I could create a series of response refs but
       #   have kept them explicitly defined for the time being
       responses:
@@ -240,7 +253,7 @@ paths:
           example: 922fc335-171f-4109-b2b0-5f1826cee53b
       # Notes on design:
       # - I would also implement a forbidden response here because only certain users
-      #   should be able to create events but I have left this out in the interests of time.
+      #   should be able to reserve event seats but I have left this out in the interests of time.
       # - To clean things up and also reuse, I could create a series of response refs but
       #   have kept them explicitly defined for the time being
       responses:
@@ -280,15 +293,10 @@ components:
     # resource over time such as:
     #  - slug
     #  - createdOn
-    #  - reservedOn
-    #  - reservedBy
     #  - seats
     Event:
       type: object
       properties:
-        # Here `id` is used as it's a common key for out of the box caching.
-        # I've mainly seen this in GraphQL settings but it doesn't hurt to keep
-        # consistency here.
         id:
           type: string
           description: The ID of the Event in UUID format
@@ -317,9 +325,6 @@ components:
     Seat:
       type: object
       properties:
-        # Here `id` is used as it's a common key for out of the box caching.
-        # I've mainly seen this in GraphQL settings but it doesn't hurt to keep
-        # consistency here.
         id:
           type: string
           description: The ID of the Seat in UUID format
@@ -337,6 +342,7 @@ components:
           example: 23
       required:
         - id
+        - eventId
         - number
     # The error shape is determined by the following RFC: https://www.rfc-editor.org/rfc/rfc9457.html
     Error:
@@ -445,7 +451,7 @@ src
 └── main.ts
 ```
 
-> **Note:** because this is a single service everything is put at the root of
+> **Note:** because this is a single service, everything is put at the root of
 > the repository. However, in a microservice system, a mono-repo would be used
 > as it provides easier implementation of features without any affect on the
 > user experience.
@@ -453,7 +459,7 @@ src
 In order to implement the RESTful API for the above design,
 [NestJS](https://docs.nestjs.com/) is a good choice because it also follows a
 domain-driven design and provides an easy way to quickly define a RESTful API.
-In addition, it provides the following features either of the box or through
+In addition, it provides the following features either out of the box or through
 plugins:
 
 - Validation
@@ -507,7 +513,7 @@ Each layer is defined as follows:
 #### Application Layer
 
 This is where the user requests are processed and deserialised at each
-entrypoint. For example, a RESTful endpoint.
+entrypoint to the system. For example, a RESTful endpoint.
 
 #### Service Layer
 
@@ -532,12 +538,12 @@ store and serve the user and system data.
 When looking at the API definition, it is clear that the data has the potential
 to be relatively structured as it evolves. And when considering one of the key
 requirements to make the user permanently assigned to the seat, then a permanent
-data store could be good option.
+data store is a consideration.
 
-However, redis itself does offer good availability and its feature set fully
-satisfies the requirements of the system. In addition, introducing another data
-store alongside redis adds complexity that is not needed at this time
-(especially when considering this tech test):
+However, redis itself does offer good availability and its feature set and data
+structure fully satisfies the requirements of the system. Moreover, introducing
+another data store alongside redis adds complexity that is not needed at this
+time (especially when considering this tech test):
 
 - Schema definition of the Event and Seat table
 - Database schema migrations
@@ -546,23 +552,22 @@ store alongside redis adds complexity that is not needed at this time
 - Testing
 - Cost
 
-In a production system, it would be good to consider and review the persistent
-data requirements of the system as well as the evolution of the data models
-going forwards.
+At this time, and for this tech test, PostgreSQL is therefore not deemed
+necessary. However, when applied in a production system, it would be good to
+consider and review the persistent data requirements of the system as well as
+the evolution of the data models going forward.
 
-At this time and for this tech test, PostgreSQL is therefore not deemed
-necessary but as mentioned, it would be good to visit for a production system.
-With this is mind, the system should account for any future changes in the data
-store and also clients (for the same data store). This is covered in the next
-section.
+With this is mind, the system **should account for any future changes** in the
+data store and also clients (for the same data store). This is covered in the
+next section.
 
 #### Repository pattern
 
 In order to account for future data store changes, a contract between the
 service and data layer that is agnostic of the underlying implementation is
 needed. This provides resilience to future changes where the service layer would
-not change if one were to move away from redis as a data store or even to a
-different redis client in the future. As a result, a
+not change (or even know) if one were to move away from redis as a data store or
+even to a different redis client in the future. As a result, a
 [Repository Pattern](https://deviq.com/design-patterns/repository-pattern) is an
 excellent way of meeting this requirement.
 
@@ -585,12 +590,12 @@ Now that the API and software & system architecture are defined, the next thing
 to consider is how to expose the functionality. Let's start with the data in
 Redis. There are 4 data stores to consider:
 
-| Data                       | Key                                      | Type     | Notes                                                                                                                                                                                                                                              |
-| -------------------------- | ---------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Event`                    | `events/EVENT_ID`                        | `string` | All events and associated metadata are stored under this key                                                                                                                                                                                       |
-| `Event Seat`               | `events/EVENT_ID/seats`                  | `set`    | All event seats and associated metadata are stored under this key as a set. Given the hard limit of 1000 seats for an event, this allows us to fetch all associated seats for an event at once. This is a seat to ensure no duplicates are stored. |
-| `Reserved Event Seat`      | `events/EVENT_ID/reserved-seats/SEAT_ID` | `string` | All reserved event seats and associated metadata are stored under this key. When held, these are set with a TTL, which means that one is able to easily infer the currently reserved seats through the uses of key patterns.                       |
-| `User Reserved Event Seat` | `users/USER_ID/events/EVENT_ID/seats`    | `set`    | All user reserved event seats and associated metadata are stored under this key. This is a seat to ensure no duplicates are stored.                                                                                                                |
+| Data                       | Key                                      | Type     | Notes                                                                                                                                                                                                                                                        |
+| -------------------------- | ---------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Event`                    | `events/EVENT_ID`                        | `string` | All events and associated metadata are stored under this key                                                                                                                                                                                                 |
+| `Event Seat`               | `events/EVENT_ID/seats`                  | `set`    | All event seats and associated metadata are stored under this key as a set. Given the hard limit of 1000 seats for an event, this allows us to fetch all associated seats for an event at once. This is a set to ensure no duplicates are stored.            |
+| `Reserved Event Seat`      | `events/EVENT_ID/reserved-seats/SEAT_ID` | `string` | All reserved event seats and associated metadata are stored under this key. When held, these are set with a TTL, which means that one is able to easily infer the currently reserved seats through the uses of key patterns (as they would be filtered out). |
+| `User Reserved Event Seat` | `users/USER_ID/events/EVENT_ID/seats`    | `set`    | All user reserved event seats and associated metadata are stored under this key. This is a set to ensure no duplicates are stored.                                                                                                                           |
 
 With the data model defined, it then makes sense to consider the E2E flow of the
 application. For this, we use a web sequence diagram:
@@ -620,7 +625,7 @@ sequenceDiagram
     User ->>+ API: Hold seat for event
     Note right of API: Use flow defined above to get available seats
     API ->> API: Get available seats for event and perform checks
-    API ->>+ Redis: Set event seat as reserved with confgured expiry
+    API ->>+ Redis: Set event seat as reserved with configured expiry
     Redis -->>- API: OK
     API -->>- User: Held
 
@@ -643,20 +648,23 @@ The above should not pose an issue in the short and medium term so it is
 recommended to stick with this approach as it will be the most simple and
 therefore, maintainable.
 
-#### If there is an issue
+#### If there is an issue in the Node,js processing
 
 However, if there is an issue, then a list-based approach should be considered
-that minimised work on Node.js servers. Rather than defining individual keys,
-one defines a series of list and passes seats between these lists. However, one
-would need to trigger the passing of seats between lists upon seat reservation
-expiry.
+that minimises work on Node.js servers. Rather than defining individual keys,
+one defines a series of lists/sets and passes seats between these. However, one
+would need to trigger the passing of seats between the lists/sets upon seat
+reservation expiry.
 
 Redis gives one the ability to trigger functionality upon certain events. Such
 an example is when the held seat expires. To do this, one can configure
 keyspaces events: `notify-keyspace-events` and listen for the expiry event:
-`EX`. This can be achieved in Node.js by setting this up once the redis publish
-channel is ready and defining business logic in the subscriber instance to react
-to expiry channel messages. When an expires message is received, the system will
+`EX`.
+
+This can be achieved in Node.js by setting this up a redis publish and
+subscription channel and utilising the stream event APIs. When the publisher
+channel is ready, define business logic in the subscriber instance to react to
+expiry channel messages. When an expires message is received, the system will
 extract the information and make the associated event seat available again.
 
 For example, here is some pseudo code:
@@ -692,22 +700,23 @@ class Repo {
 
 > **Note:** it is worth noting that this will have some impact on the
 > deployment. For example, if using GCP Cloud Run, CPU throttling will need to
-> be turned off and a minimum instance count of at least one set to ensure that
+> be turned off and a minimum instance count of at least 1 to ensure that
 > messages are correctly and successfully processed by the receiver. Should this
 > process fail, it will be important to have processes to ensure that expired
 > event seats are eventually made available again.
 
-Without running some benchmarks, it is hard to say whether this is the correct
-approach but it is an option on the table at least.
+This approach does introduce some complexity and even some new issues so it is
+not recommended at this time. However, it is an option on the table should the
+simpler approach be deemed insufficient.
 
 ### Error handling
 
 Ideally the system should use a well-defined structure when handling errors and
 in this instance, it makes sense to use the following RFC:
-https://www.rfc-editor.org/rfc/rfc9457.html to have well-defined details for
-errors in HTTP responses. This has been approved for publication by the Internet
-Engineering Steering Group (IESG). As a result, the errors will be structured as
-follows:
+https://www.rfc-editor.org/rfc/rfc9457.html which aims to have well-defined
+details for errors in HTTP responses. This has been approved for publication by
+the Internet Engineering Steering Group (IESG). This is the recommended solution
+so the errors will be structured as follows:
 
 ```yaml
 type: object
@@ -716,7 +725,7 @@ properties:
     type: string
     # Note, in this test this will be the local file path for the error
     description: The type of the problem. This will resolve to the relevant documentation for the error in question.
-    example: file://docs/errors.md
+    example: file://docs/errors.md#error
   status:
     type: integer
     description: The HTTP Status of the problem.
@@ -748,33 +757,37 @@ request headers. For example:
 | `authorization` | `Bearer NmU4NTllMjgtODZjMy00ZWI5LTk2NzQtZjQ4YWM4OWNjMWM1` | `6e859e28-86c3-4eb9-9674-f48ac89cc1c5` |
 
 No authorization will be implemented at this time, but this would be considered
-for a production system. In this case, a permissions system would be used where
-a strong convention would be a critical part of the solution.
+for a production system. In this case, a permissions system would be used and a
+strong convention for how what these permissions look like would be a critical
+part of the solution.
 
 ### Validation
-
-> **Note:** because of time constraints in mapping validation errors to the
-> associated errors, this will not be implemented unless time allows.
 
 Validation works really well with NestJS model definition with the
 [`class-validator`](https://www.npmjs.com/package/class-validator) package. At
 this time, only basic validation will be applied to ensure that the data
-satisfies the contracts. This would be implemented as follows:
-https://docs.nestjs.com/techniques/validation
+satisfies the contracts and the key requirements of the tech test. This would be
+implemented as follows: https://docs.nestjs.com/techniques/validation
 
 ### Logging and Monitoring
 
-> **Note:** because of time constraints, this will not be implemented unless
-> time allows.
+> **Note:** because of time constraints, this will not be implemented but it
+> would be done in a production system.
 
 In order to ensure sufficient observability of the system, logging, tracing and
 metrics will be considered.
 
 #### Logging
 
-A logger instance will be defined. This will include a correlation ID which will
-be crucial in identifying relevant logs for a request. In addition, structured
-logging would be implemented as it brings huge searchability benefits.
+A logger instance will be defined and made available in the following contexts:
+
+- Request context
+- Server context
+
+This will include a correlation ID which is crucial in identifying relevant logs
+for a request (even across multiple systems). In addition, structured logging
+would be implemented as it brings huge searchability benefits as well as the
+ability to connect traces with logs.
 
 #### OpenTelemetry
 
@@ -788,6 +801,8 @@ following reasons:
 - Vendor agnostic
 - Exports to all the major cloud providers
 - Provides tracing and metrics
+- Provides a Propagation API for distributed systems (not necessarily relevant
+  here, but good for future proofing)
 - Will provide logging in the future too
 
 ### Testing
@@ -796,20 +811,21 @@ following reasons:
 > integrations tests.
 
 In terms of testing this API, a trophy testing pattern will be used to provide a
-good balance between amount of tests one needs to write vs confidence in
-testing. By focussing on in-memory integration tests (calling the endpoint as
-realistically as possible but any integrations (such as redis) are mocked).
+good balance between amount of tests one needs to write vs confidence the tests
+give us in going to production. By focussing on in-memory integration tests
+(calling the endpoint as realistically as possible but any integrations (such as
+Redis) are mocked) and ensuring high test coverage, the confidence in the final
+solution will be high.
 
 For the test framework/runner, the
-[Node.js test](https://nodejs.org/api/test.html) runner could be used as it's
-needed (and I've never used it before!). However, it does not easily support
-TypeScript so it fails the stability test requirement but something to keep an
-eye out for the future. As an alternative,
-[`jest`](https://jestjs.io/docs/getting-started) is the next best option as it
-has a stable API, support TypeScript easily and has everything we need.
+[Node.js test](https://nodejs.org/api/test.html) runner could be used but it
+does not easily support TypeScript and is relatively new so it fails the
+stability test requirement - something to keep an eye out for the future! As an
+alternative, [`jest`](https://jestjs.io/docs/getting-started) is the next best
+option as it has a stable API, supports TypeScript easily and has everything we
+need.
 
-The AAA testing pattern will be used: part of Node.js core so it is stable and
-the features appear to have everything
+The AAA testing pattern will be used:
 
 - Arrange
 - Act
@@ -824,12 +840,13 @@ This will be achieved out of the box by
 
 #### Unit test
 
-> **Note:** this will not be implemented but here is what I would do
+> **Note:** this will not be implemented but here is what I would do in a
+> production system
 
-Used for permutations of functionality that is hard to integration test or when
-needed to test very specific circumstances of the internals.
+Used for permutations of functionality that are hard to write integration test
+for or when needed to test very specific circumstances of the internals.
 
-This will live next to the files in question.
+These will live next to the files in question.
 
 #### Integration test
 
@@ -842,7 +859,7 @@ Here, two types of integration test will be used:
     https://www.npmjs.com/package/redis-memory-server as it is well maintained
     and documented.
 
-> **Note:** this will not be implemented but here is what I would do
+> **Note:** the following will not be implemented but here is what I would do
 
 - Smoke - real integrations and data stores used
 
@@ -850,40 +867,44 @@ This will live in the `tests` folder.
 
 #### E2E test
 
-> **Note:** this will not be implemented but here is what I would do
+> **Note:** this will not be implemented but here is what I would do in a
+> production system
 
 E2E tests will be used to test the full E2E flow that a user will realistically
-make.
+make. They will mainly focus on the happy path and some key error cases.
 
 #### Performance testing
 
-> **Note:** this will not be implemented but here is what I would do
+> **Note:** this will not be implemented but here is what I would do in a
+> production system
 
 Performance testing will be used to test the performance of the application
 under realistic loads. Here
-[`autocannon`](https://github.com/mcollina/autocannon) is a good option that is
-well documented, stable and provides a strong user API.
+[`autocannon`](https://github.com/mcollina/autocannon) is a good option as it is
+well documented, stable, and provides a strong user API.
 
 #### Security testing
 
-> **Note:** this will not be implemented but here is what I would do
+> **Note:** this will not be implemented but here is what I would do in a
+> production system
 
 There are several types of security that can be implemented:
 
 - [SAST](https://en.wikipedia.org/wiki/Static_application_security_testing)
 - [DAST](https://en.wikipedia.org/wiki/Dynamic_application_security_testing)
 
-These will provide confidence that systems shipped to production are
-sufficiently secure.
+These will provide confidence that systems shipped to production have passed
+basic security benchmarks.
 
 #### Debugging
 
-> **Note:** this will not be implemented but here is what I would do
+> **Note:** this will not be implemented but here is what I would do in a
+> production system
 
 In order to debug the system locally, debug support and subsequent profiles
 would be setup such that the debugger can be started out of the box. An
 important thing to consider is what editors developers generally use. This
-design would assume most use VSCode and following this
+design would assume most use VSCode and therefore follow this
 [guide](https://code.visualstudio.com/docs/editor/debugging).
 
 ### Developer Tooling
@@ -904,43 +925,76 @@ dependent commands) to the developer.
 
 ## Proposed Solution
 
-> **Note:** in a normal design document with more time to complete, I would take
-> make recommendations based on each explored aspect as there would be more to
-> consider. As a result, the proposed solution is fairly light and predominantly
-> refers to parts of the exploration.
+> **Note:** in a normal design document with more time to complete, I would make
+> recommendations based on each explored aspect as there would potentially be
+> more to consider. As a result, the proposed solution is fairly lightweight and
+> predominantly refers to the relevant parts of the exploration.
 
 ### API design
 
-Implement the API design as discussed in the exploration. Please note, the
-generated API spec from the implementation won't exactly match the target spec
-due to the nature that it generates the spec. However, it will be effectively
-equivalent.
+Implement the API design as discussed in the exploration using NestJS.
+
+> **Note:** the generated API spec from the implementation won't exactly match
+> the target spec due to the fact that it generates the spec. However, it will
+> be equivalent.
 
 ### Software architecture and patterns
 
 Implement the software architecture and patterns as discussed in the
-exploration.
+exploration:
+
+- Domain-driven design
+- Layered approach:
+  - Application
+  - Service
+  - Data
+- Use the repository pattern for the data layer
+
+### Business logic
+
+Implement the business logic flows as detailed in the exploration for each
+endpoint:
+
+- Create event
+- Get available Seats for an Event
+- Hold an available Seat for a User
+- Permanently reserve an available Seat for a User
+
+Use a test-driven approach to write this business logic.
 
 ### Authentication and Authorization
 
-Implement the Authentication and Authorization as discussed in the exploration.
+Implement the authentication only using NestJS as discussed in the exploration.
 
 ### Error handling
 
-Implement the error handling as discussed in the exploration.
+Implement the error handling as discussed in the exploration and ensure that the
+[error documentation](./errors.md) is correctly linked to each defined error in
+the source code.
+
+Ensure that each service method has a fallback Internal Server error for
+unhandled errors.
 
 ### Validation
 
-Implement the validation as discussed in the exploration.
+Implement the validation as discussed in the exploration using NestJS. Take a
+basic approach and refine the contents if time allows.
 
 ### Logging and Monitoring
 
-Implement the logging and monitoring as discussed in the exploration.
+This will not be implemented as discussed.
+
+However, a request context will be created and this is where the logging and
+monitoring will go in a production system.
 
 ### Testing
 
-Implement the testing as discussed in the exploration.
+Implement the in-memory integration testing as discussed in the exploration.
+Ensure that sufficient coverage achieved when the tests are run.
 
 ### Developer Tooling
 
-Implement the developer tooling as discussed in the exploration.
+Implement the developer tooling as discussed in the exploration:
+
+- asdf
+- Taskfile

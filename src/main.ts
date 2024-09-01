@@ -7,7 +7,7 @@ import { AppModule } from './app.module';
 import { UnprocessableContentError } from './errors/error';
 import { ConfigService, Environment } from './config/config.service';
 
-async function bootstrap() {
+async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(
     // In a production system, I would refine the exception filter further
@@ -49,4 +49,5 @@ async function bootstrap() {
   }
   await await app.listen(3000);
 }
+
 bootstrap();

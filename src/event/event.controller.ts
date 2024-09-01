@@ -44,8 +44,6 @@ export class EventController {
     description: 'Bad Request Error',
     type: BadRequestError,
   })
-  // Note, unable to add validation in time. However, in production this
-  // would be implemented as follows: https://docs.nestjs.com/techniques/validation
   @ApiUnprocessableEntityResponse({
     description: 'Unprocessable Content Error',
     type: UnprocessableContentError,

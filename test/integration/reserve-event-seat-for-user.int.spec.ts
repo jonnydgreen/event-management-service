@@ -50,13 +50,14 @@ describe('Create Event', () => {
     process.env.MAX_EVENT_SEAT_HOLD_TIME_IN_S = '1';
     const result = await setupTests({ server: { appModule: AppModule } });
     try {
+      const appOrigin = result.outputs.server.output.origin;
       const [, event] = await createEvent(appOrigin, headers, createEventBody);
       const { id: eventId } = event;
       const [, getAvailableSeatsJson1] = await getAvailableSeats(
         appOrigin,
         eventId,
       );
-      const [seat] = getAvailableSeatsJson1;
+      const [, , , seat] = getAvailableSeatsJson1;
       await holdSeat(appOrigin, headers, eventId, seat.id);
 
       // Act
@@ -86,7 +87,7 @@ describe('Create Event', () => {
       expect(getAvailableSeatsJson2).toEqual(getAvailableSeatsJson3);
     } finally {
       await result.teardownTests();
-      process.env.MAX_EVENT_SEAT_HOLD_TIME_IN_S = undefined;
+      delete process.env.MAX_EVENT_SEAT_HOLD_TIME_IN_S;
     }
   });
 
@@ -132,13 +133,17 @@ describe('Create Event', () => {
     };
     const otherHeaders = createAuthenticatedHeaders();
     const headers = createAuthenticatedHeaders();
-    const [, event] = await createEvent(appOrigin, headers, createEventBody);
+    const [, event] = await createEvent(
+      appOrigin,
+      otherHeaders,
+      createEventBody,
+    );
     const { id: eventId } = event;
     const [, getAvailableSeatsJson1] = await getAvailableSeats(
       appOrigin,
       eventId,
     );
-    const [seat] = getAvailableSeatsJson1;
+    const [, , seat] = getAvailableSeatsJson1;
     await holdSeat(appOrigin, otherHeaders, eventId, seat.id);
 
     // Act

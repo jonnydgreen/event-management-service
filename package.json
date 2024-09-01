@@ -1,8 +1,8 @@
 {
   "name": "event-management",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "An event management service",
-  "author": "jonnydgreen",
+  "author": "jonnydgreen <hello@jonnydgreen.com>",
   "private": true,
   "license": "MIT",
   "scripts": {
@@ -13,12 +13,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:cov": "jest --coverage",
-    "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:int": "jest --coverage --config ./test/integration/jest-int.json",
-    "test:e2e": "jest --config ./test/jest-e2e.json"
+    "test:int": "jest --coverage --config ./test/integration/jest-int.json"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",
