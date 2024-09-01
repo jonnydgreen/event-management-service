@@ -76,8 +76,7 @@ proposed spec (which was tested using
 > **Note:** several comments have been left throughout the target spec
 > highlighting thoughts and decisions.
 
-The target OpenAPI spec is available at:
-[`openapi.target.yaml`](../openapi.target.yaml)
+The target OpenAPI spec is available at: [`openapi.yaml`](../openapi.yaml)
 
 ```yaml
 openapi: '3.0.3'

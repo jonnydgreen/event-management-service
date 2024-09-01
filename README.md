@@ -12,7 +12,7 @@ The design document can be found [here](./docs/design.md).
 
 ## API Spec
 
-The target API spec can be found [here](./openapi.target.yaml).
+The target API spec can be found [here](./openapi.yaml).
 
 The generated API spec can be found [here](./openapi.yaml).
 

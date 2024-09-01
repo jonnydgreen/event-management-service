@@ -45,7 +45,7 @@ async function bootstrap(): Promise<void> {
       paths: document.paths,
       components: document.components,
     });
-    await fs.writeFile('openapi.yaml', content);
+    await fs.writeFile('openapi.gen.yaml', content);
   }
   await await app.listen(3000);
 }

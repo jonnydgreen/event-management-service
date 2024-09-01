@@ -1,190 +1,278 @@
-openapi: 3.0.0
+openapi: '3.0.3'
 info:
   title: Event Management Service
-  description: The Event Management Service provides the means to manage all
-    things to do with Events and Seats for specified Events.
+  description: A REST API service managing Event Seat reservations.
   version: 1.0.0
-  contact: {}
-servers: []
+servers:
+  - url: http://localhost:3000/v1alpha1
 tags:
   - name: Event
     description: An Event.
+  # Note, we could prepend Seat with Event to avoid future name conflicts
+  # but this is unlikely in the context of this service so this is not done for
+  # cleanliness of the model definition.
   - name: Seat
-    description: The Seat associated with an Event.
+    description: A seat associated with an Event.
 paths:
-  /v1alpha1/events:
+  /events:
     post:
-      operationId: EventController_createEvent
-      parameters: []
+      tags:
+        - Event
+      summary: Create an Event.
+      description: Create an Event.
+      operationId: createEvent
       requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreateEventDto"
+        '$ref': '#/components/requestBodies/Event'
+      # Notes on design:
+      # - I would also implement a forbidden response here because only certain users
+      #   should be able to create events but I have left this out in the interests of time.
+      # - To clean things up and also reuse, I could create a series of response refs but
+      #   have kept them explicitly defined for the time being
       responses:
-        "201":
+        '201':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Event"
-        "400":
+                $ref: '#/components/schemas/Event'
+        '400':
           description: Bad Request Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/BadRequestError"
-        "401":
+                '$ref': '#/components/schemas/BadRequestError'
+        '401':
           description: Unauthorized Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UnauthorizedError"
-        "422":
+                '$ref': '#/components/schemas/UnauthorizedError'
+        '422':
           description: Unprocessable Content Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UnprocessableContentError"
+                '$ref': '#/components/schemas/UnprocessableContentError'
       security:
-        - bearer: []
-  /v1alpha1/events/{eventId}/seats:
+        - bearerAuth: []
+  /events/{eventId}/seats:
+    # Note, there is no auth required for this endpoint.
     get:
-      operationId: EventController_getAvailableSeats
+      tags:
+        - Seat
+      summary: Get available Seats for an Event.
+      description: Get available Seats for an Event.
+      operationId: getAvailableSeatsByEvent
       parameters:
         - name: eventId
-          required: true
           in: path
           schema:
             type: string
+            description: The ID of the Event in UUID format.
+            format: uuid
+          required: true
+          example: bf9eec7d-9b97-46b8-9cfb-706a2862520b
+      # Notes on design:
+      # - To clean things up and also reuse, I could create a series of response refs but
+      #   have kept them explicitly defined for the time being
       responses:
-        "200":
+        '200':
           description: Successful operation
           content:
             application/json:
+              # Note: pagination was not chosen here because the maximum number
+              # of seats associated with an Event is 1000 which shouldn't provide much load
+              # on the endpoint. In addition, we always want to return all the seats for an event.
+              # However, if pagination was deemed necessary (with a data-driven
+              # decision), it would be implemented using either offset or cursor-based
+              # pagination, whichever is deemed more appropriate for the use-case.
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/Seat"
-        "404":
+                  '$ref': '#/components/schemas/Seat'
+        '404':
           description: Not found Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/NotFoundError"
-  /v1alpha1/events/{eventId}/seats/{seatId}/hold:
+                '$ref': '#/components/schemas/NotFoundError'
+  /events/{eventId}/seats/{seatId}/hold:
     post:
-      operationId: EventController_holdSeatForUser
+      tags:
+        - Seat
+      summary: Hold an available Seat for a User.
+      description: Hold an available Seat for a User.
+      operationId: holdEventSeatForUser
       parameters:
         - name: eventId
-          required: true
           in: path
           schema:
             type: string
+            description: The ID of the Event in UUID format.
+            format: uuid
+          required: true
+          example: bf9eec7d-9b97-46b8-9cfb-706a2862520b
         - name: seatId
-          required: true
           in: path
           schema:
             type: string
+            description: The ID of the Seat in UUID format.
+            format: uuid
+          required: true
+          example: 922fc335-171f-4109-b2b0-5f1826cee53b
+      # Notes on design:
+      # - I would also implement a forbidden response here because only certain users
+      #   should be able to hold event seats but I have left this out in the interests of time.
+      # - To clean things up and also reuse, I could create a series of response refs but
+      #   have kept them explicitly defined for the time being
       responses:
-        "204":
+        # Could potentially return some information such as a holding ID
+        # if this was deemed to be useful but for the sake of simplicity,
+        # nothing is returned at this time.
+        '204':
           description: Successful operation
-        "401":
+        '401':
           description: Unauthorized Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UnauthorizedError"
-        "404":
+                '$ref': '#/components/schemas/UnauthorizedError'
+        '404':
           description: Not found Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/NotFoundError"
+                '$ref': '#/components/schemas/NotFoundError'
       security:
-        - bearer: []
-  /v1alpha1/events/{eventId}/seats/{seatId}/reserve:
+        - bearerAuth: []
+  /events/{eventId}/seats/{seatId}/reserve:
     post:
-      operationId: EventController_reserveSeat
+      tags:
+        - Seat
+      summary: Permanently reserve an available Seat for a User.
+      description: Permanently reserve an available Seat for a User.
+      operationId: reserveEventSeatForUser
       parameters:
         - name: eventId
-          required: true
           in: path
           schema:
             type: string
+            description: The ID of the Event in UUID format.
+            format: uuid
+          required: true
+          example: bf9eec7d-9b97-46b8-9cfb-706a2862520b
         - name: seatId
-          required: true
           in: path
           schema:
             type: string
+            description: The ID of the Seat in UUID format.
+            format: uuid
+          required: true
+          example: 922fc335-171f-4109-b2b0-5f1826cee53b
+      # Notes on design:
+      # - I would also implement a forbidden response here because only certain users
+      #   should be able to reserve event seats but I have left this out in the interests of time.
+      # - To clean things up and also reuse, I could create a series of response refs but
+      #   have kept them explicitly defined for the time being
       responses:
-        "204":
+        # Could potentially return some information such as a holding ID
+        # if this was deemed to be useful but for the sake of simplicity,
+        # nothing is returned at this time.
+        '204':
           description: Successful operation
-        "401":
+        '401':
           description: Unauthorized Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UnauthorizedError"
-        "404":
+                '$ref': '#/components/schemas/UnauthorizedError'
+        '404':
           description: Not found Error
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/NotFoundError"
+                '$ref': '#/components/schemas/NotFoundError'
       security:
-        - bearer: []
+        - bearerAuth: []
 components:
   securitySchemes:
-    bearer:
-      scheme: bearer
-      bearerFormat: JWT
+    bearerAuth:
       type: http
+      scheme: bearer
+      # In a production setting, this would be identified by a more
+      # secure and flexible approach such as a [JWT](https://jwt.io/).
+      # However, in the interests of time and simplicity, the user
+      # will be identified by the contents of the base64 encoded API
+      # token in the request headers.
+      bearerFormat: Base64
   schemas:
-    CreateEventDto:
-      type: object
-      properties:
-        name:
-          type: string
-          description: The name of the Event
-        numberOfSeats:
-          type: number
-          description: The number of Seats required to create the Event
-          minimum: 10
-          maximum: 1000
-      required:
-        - name
-        - numberOfSeats
+    # In the interests of time and simplicity, I have kept these schemas relatively simple.
+    # In a production setting, I would add additional metadata to aid the evolution of this
+    # resource over time such as:
+    #  - slug
+    #  - createdOn
+    #  - seats
     Event:
       type: object
       properties:
         id:
           type: string
           description: The ID of the Event in UUID format
+          format: uuid
           example: 958a4b17-fb57-4667-a2bf-82a0924ddbca
         name:
           type: string
           description: The name of the Event
-          example: Lord of the Rings extended edition marathon
+          example: 'Lord of the Rings extended edition marathon'
         totalSeats:
-          type: number
+          type: integer
           description: The total number of seats associated with the Event
           example: 15
       required:
         - id
         - name
         - totalSeats
-    BadRequestError:
+    # In the interests of time and simplicity, I have kept these schemas relatively simple.
+    # In a production setting, I would add additional metadata to aid the evolution of this
+    # resource over time such as:
+    #  - slug
+    #  - status
+    #  - createdOn
+    #  - reservedOn
+    #  - reservedBy
+    Seat:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The ID of the Seat in UUID format
+          format: uuid
+          example: 958a4b17-fb57-4667-a2bf-82a0924ddbca
+        eventId:
+          type: string
+          description: The Event ID of the Seat in UUID format
+          format: uuid
+          example: bf9eec7d-9b97-46b8-9cfb-706a2862520b
+        # Note, this is set to an integer for simplicity but this could be different according to the definition of a seat
+        number:
+          type: integer
+          description: The number of the Seat
+          example: 23
+      required:
+        - id
+        - eventId
+        - number
+    # The error shape is determined by the following RFC: https://www.rfc-editor.org/rfc/rfc9457.html
+    Error:
       type: object
       properties:
         type:
           type: string
-          description: The type of the problem. This will resolve to the relevant
-            documentation for the error in question.
-          example: file://docs/errors.md#bad-request-error
+          # Note, in this test this will resolve to the local file path for the error
+          description: The type of the problem. This will resolve to the relevant documentation for the error in question.
+          example: file://docs/errors.md#error
         status:
-          type: number
+          type: integer
           description: The HTTP Status of the problem.
           example: 400
         title:
@@ -193,104 +281,70 @@ components:
           example: Error
         detail:
           type: string
-          description: The human-readable explanation specific to this occurrence of the
-            problem.
+          description: The human-readable explanation specific to this occurrence of the problem.
           example: Error details
       required:
         - type
         - status
         - title
+    BadRequestError:
+      # A technique to ensure we implement the error interface
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - description: Bad request error
+        - example:
+            type: 'file://docs/errors.md#bad-request-error'
+            status: 400
+            title: 'Bad request error'
+            detail: 'Bad request error details'
     UnauthorizedError:
-      type: object
-      properties:
-        type:
-          type: string
-          description: The type of the problem. This will resolve to the relevant
-            documentation for the error in question.
-          example: file://docs/errors.md#unauthorized-error
-        status:
-          type: number
-          description: The HTTP Status of the problem.
-          example: 401
-        title:
-          type: string
-          description: The short, human-readable summary of the problem.
-          example: Error
-        detail:
-          type: string
-          description: The human-readable explanation specific to this occurrence of the
-            problem.
-          example: Error details
-      required:
-        - type
-        - status
-        - title
+      # A technique to ensure we implement the error interface
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - description: Unauthorized error
+        - example:
+            type: 'file://docs/errors.md#unauthorized-error'
+            status: 401
+            title: 'Unauthorized error'
+            detail: 'Unauthorized error details'
     UnprocessableContentError:
-      type: object
-      properties:
-        type:
-          type: string
-          description: The type of the problem. This will resolve to the relevant
-            documentation for the error in question.
-          example: file://docs/errors.md#unprocessable-content-error
-        status:
-          type: number
-          description: The HTTP Status of the problem.
-          example: 422
-        title:
-          type: string
-          description: The short, human-readable summary of the problem.
-          example: Error
-        detail:
-          type: string
-          description: The human-readable explanation specific to this occurrence of the
-            problem.
-          example: Error details
-      required:
-        - type
-        - status
-        - title
-    Seat:
-      type: object
-      properties:
-        id:
-          type: string
-          description: The ID of the Seat in UUID format
-          example: 958a4b17-fb57-4667-a2bf-82a0924ddbca
-        number:
-          type: number
-          description: The number of the Seat
-          example: 23
-        eventId:
-          type: string
-          description: The Event ID of the Seat in UUID format
-          example: bf9eec7d-9b97-46b8-9cfb-706a2862520b
-      required:
-        - id
-        - number
-        - eventId
+      # A technique to ensure we implement the error interface
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - description: Unprocessable Content error
+        - example:
+            type: 'file://docs/errors.md#unprocessable-content-error'
+            status: 422
+            title: 'Unprocessable Content error'
+            detail: 'Unprocessable Content error details'
     NotFoundError:
-      type: object
-      properties:
-        type:
-          type: string
-          description: The type of the problem. This will resolve to the relevant
-            documentation for the error in question.
-          example: file://docs/errors.md#not-found-error
-        status:
-          type: number
-          description: The HTTP Status of the problem.
-          example: 404
-        title:
-          type: string
-          description: The short, human-readable summary of the problem.
-          example: Error
-        detail:
-          type: string
-          description: The human-readable explanation specific to this occurrence of the
-            problem.
-          example: Error details
-      required:
-        - type
-        - status
-        - title
+      # A technique to ensure we implement the error interface
+      allOf:
+        - $ref: '#/components/schemas/Error'
+        - description: Not found error
+        - example:
+            type: 'file://docs/errors.md#not-found-error'
+            status: 422
+            title: 'Not found error'
+            detail: 'Not found error details'
+  requestBodies:
+    Event:
+      description: Event to be created
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                description: The name of the Event
+                example: 'Lord of the Rings extended edition marathon'
+              numberOfSeats:
+                type: integer
+                description: The number of Seats required to create the Event
+                minimum: 10
+                maximum: 1000
+            required:
+              - name
+              - numberOfSeats
+      required: true

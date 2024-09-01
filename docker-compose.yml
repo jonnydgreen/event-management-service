@@ -15,7 +15,7 @@ services:
       MAX_EVENT_SEAT_HOLD_TIME_IN_S: '45'
     volumes:
       - ./src:/app/src
-      - ./openapi.yaml:/app/openapi.yaml
+      - ./openapi.gen.yaml:/app/openapi.gen.yaml
     # If time permitted, I would setup debug profiles to allow for easier debugging
     command: npm run start:debug
 

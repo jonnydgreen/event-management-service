@@ -1,0 +1,296 @@
+openapi: 3.0.0
+info:
+  title: Event Management Service
+  description: The Event Management Service provides the means to manage all
+    things to do with Events and Seats for specified Events.
+  version: 1.0.0
+  contact: {}
+servers: []
+tags:
+  - name: Event
+    description: An Event.
+  - name: Seat
+    description: The Seat associated with an Event.
+paths:
+  /v1alpha1/events:
+    post:
+      operationId: EventController_createEvent
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEventDto"
+      responses:
+        "201":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+        "400":
+          description: Bad Request Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BadRequestError"
+        "401":
+          description: Unauthorized Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "422":
+          description: Unprocessable Content Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnprocessableContentError"
+      security:
+        - bearer: []
+  /v1alpha1/events/{eventId}/seats:
+    get:
+      operationId: EventController_getAvailableSeats
+      parameters:
+        - name: eventId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Seat"
+        "404":
+          description: Not found Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+  /v1alpha1/events/{eventId}/seats/{seatId}/hold:
+    post:
+      operationId: EventController_holdSeatForUser
+      parameters:
+        - name: eventId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: seatId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Successful operation
+        "401":
+          description: Unauthorized Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Not found Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+      security:
+        - bearer: []
+  /v1alpha1/events/{eventId}/seats/{seatId}/reserve:
+    post:
+      operationId: EventController_reserveSeat
+      parameters:
+        - name: eventId
+          required: true
+          in: path
+          schema:
+            type: string
+        - name: seatId
+          required: true
+          in: path
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Successful operation
+        "401":
+          description: Unauthorized Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UnauthorizedError"
+        "404":
+          description: Not found Error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotFoundError"
+      security:
+        - bearer: []
+components:
+  securitySchemes:
+    bearer:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http
+  schemas:
+    CreateEventDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of the Event
+        numberOfSeats:
+          type: number
+          description: The number of Seats required to create the Event
+          minimum: 10
+          maximum: 1000
+      required:
+        - name
+        - numberOfSeats
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The ID of the Event in UUID format
+          example: 958a4b17-fb57-4667-a2bf-82a0924ddbca
+        name:
+          type: string
+          description: The name of the Event
+          example: Lord of the Rings extended edition marathon
+        totalSeats:
+          type: number
+          description: The total number of seats associated with the Event
+          example: 15
+      required:
+        - id
+        - name
+        - totalSeats
+    BadRequestError:
+      type: object
+      properties:
+        type:
+          type: string
+          description: The type of the problem. This will resolve to the relevant
+            documentation for the error in question.
+          example: file://docs/errors.md#bad-request-error
+        status:
+          type: number
+          description: The HTTP Status of the problem.
+          example: 400
+        title:
+          type: string
+          description: The short, human-readable summary of the problem.
+          example: Error
+        detail:
+          type: string
+          description: The human-readable explanation specific to this occurrence of the
+            problem.
+          example: Error details
+      required:
+        - type
+        - status
+        - title
+    UnauthorizedError:
+      type: object
+      properties:
+        type:
+          type: string
+          description: The type of the problem. This will resolve to the relevant
+            documentation for the error in question.
+          example: file://docs/errors.md#unauthorized-error
+        status:
+          type: number
+          description: The HTTP Status of the problem.
+          example: 401
+        title:
+          type: string
+          description: The short, human-readable summary of the problem.
+          example: Error
+        detail:
+          type: string
+          description: The human-readable explanation specific to this occurrence of the
+            problem.
+          example: Error details
+      required:
+        - type
+        - status
+        - title
+    UnprocessableContentError:
+      type: object
+      properties:
+        type:
+          type: string
+          description: The type of the problem. This will resolve to the relevant
+            documentation for the error in question.
+          example: file://docs/errors.md#unprocessable-content-error
+        status:
+          type: number
+          description: The HTTP Status of the problem.
+          example: 422
+        title:
+          type: string
+          description: The short, human-readable summary of the problem.
+          example: Error
+        detail:
+          type: string
+          description: The human-readable explanation specific to this occurrence of the
+            problem.
+          example: Error details
+      required:
+        - type
+        - status
+        - title
+    Seat:
+      type: object
+      properties:
+        id:
+          type: string
+          description: The ID of the Seat in UUID format
+          example: 958a4b17-fb57-4667-a2bf-82a0924ddbca
+        number:
+          type: number
+          description: The number of the Seat
+          example: 23
+        eventId:
+          type: string
+          description: The Event ID of the Seat in UUID format
+          example: bf9eec7d-9b97-46b8-9cfb-706a2862520b
+      required:
+        - id
+        - number
+        - eventId
+    NotFoundError:
+      type: object
+      properties:
+        type:
+          type: string
+          description: The type of the problem. This will resolve to the relevant
+            documentation for the error in question.
+          example: file://docs/errors.md#not-found-error
+        status:
+          type: number
+          description: The HTTP Status of the problem.
+          example: 404
+        title:
+          type: string
+          description: The short, human-readable summary of the problem.
+          example: Error
+        detail:
+          type: string
+          description: The human-readable explanation specific to this occurrence of the
+            problem.
+          example: Error details
+      required:
+        - type
+        - status
+        - title
