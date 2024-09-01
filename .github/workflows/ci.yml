@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      # Using a matrix strategy to account for teams where multiple
+      # platforms may be used
+      matrix:
+        os:
+          - macOS-latest
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          # If time permitted, I would read the version from asdf
+          # and use that to retain a single source of truth
+          node-version: '22.7.0'
+
+      - name: Install
+        run: npm ci
+
+      - name: Run build
+        run: npm run build
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run tests
+        run: npm run test:int
