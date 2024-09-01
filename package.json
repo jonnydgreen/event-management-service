@@ -28,7 +28,7 @@
     "yaml": "^2.5.0"
   },
   "devDependencies": {
-    "@nestjs/cli": "^10.0.0",
+    "@nestjs/cli": "^10.4.5",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.0.0",
     "@nifty-lil-tricks/testing": "^0.6.0",
