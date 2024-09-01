@@ -27,6 +27,9 @@ export class EventService {
     this.#eventRepository = eventRepository;
   }
 
+  // Note: I always make sure to assign types to all function/method returns
+  // and variable assignments to make sure we don't slow down the compilation
+  // and run into slow type scenarios.
   async createEvent(ctx: Context, input: CreateEventDto): Promise<Event> {
     try {
       const numSeats = input.numberOfSeats;

@@ -29,11 +29,11 @@ system using NodeJS, Redis and Docker.
     - Users can “Hold” a seat for a limited amount of time. This is particularly
       useful when other parts of the system are, for example, completing the
       confirmation flow and payment.
-  - In order to Hold a seat, your system will require the user identifier. For
-    this exercise, the user will simply be identified by an UUID.
-    - A user can hold a seat for a configured maximum time of seconds, after
-      which the seat will become available to other users. You can default this
-      to 60 seconds.
+    - In order to Hold a seat, your system will require the user identifier. For
+      this exercise, the user will simply be identified by an UUID.
+      - A user can hold a seat for a configured maximum time of seconds, after
+        which the seat will become available to other users. You can default
+        this to 60 seconds.
   - Reserve a particular seat.
     - A user can complete the reservation of a seat, only if the user is
       “Holding” the relevant seat. After the reservation, this seat becomes
@@ -435,8 +435,8 @@ components:
 ### Software architecture and patterns
 
 In order to keep all related functionality together in one place for easier
-maintenance and organisation, a domain-driven design will be applied to the file
-structure. For example:
+maintenance, flexibility, and organisation, a domain-driven design will be
+applied to the file structure. For example:
 
 ```txt
 src
@@ -459,8 +459,8 @@ src
 In order to implement the RESTful API for the above design,
 [NestJS](https://docs.nestjs.com/) is a good choice because it also follows a
 domain-driven design and provides an easy way to quickly define a RESTful API.
-In addition, it provides the following features either out of the box or through
-plugins:
+In addition, it provides the lots of features either out of the box or through
+plugins, such as:
 
 - Validation
 - Authentication and Authorization
@@ -513,7 +513,8 @@ Each layer is defined as follows:
 #### Application Layer
 
 This is where the user requests are processed and deserialised at each
-entrypoint to the system. For example, a RESTful endpoint.
+entrypoint to the system. For example, a RESTful endpoint. It is best to keep
+this as thin as possible and delegate any business logic to the service layer.
 
 #### Service Layer
 
@@ -536,26 +537,36 @@ store and serve the user and system data.
 #### Should PostgreSQL (or other SQL-like solutions) be considered alongside this?
 
 When looking at the API definition, it is clear that the data has the potential
-to be relatively structured as it evolves. And when considering one of the key
-requirements to make the user permanently assigned to the seat, then a permanent
-data store is a consideration.
+to be relatively structured as it evolves and a SQL-like datastore is a good
+match in this case. And when considering one of the key requirements to make the
+user permanently assigned to the seat, then a data store with permanent data
+storage is a consideration.
 
-However, redis itself does offer good availability and its feature set and data
+However, Redis itself does offer good availability and its feature set and data
 structure fully satisfies the requirements of the system. Moreover, introducing
 another data store alongside redis adds complexity that is not needed at this
-time (especially when considering this tech test):
+time (especially when considering this tech test). If one were to introduce
+PostgreSQL, then the following would need to be implemented and considered:
 
-- Schema definition of the Event and Seat table
-- Database schema migrations
-- Database data migrations
+- Schema definition of the Event and Seat table, including any required mapping
+  tables and views.
 - Database client and/or choice of ORM (e.g. kysely, Prisma, Drizzle etc)
+  - I would likely choose either Drizzle or Kysely based on their strong focus
+    on documentation, stability, community support, and keeping things SQL-like.
+- Database schema migrations
+  - I would use what is available to the client/ORM to keep the database schema
+    definition to a single source of truth.
+- Database data migrations
+  - Again, I would use the client/ORM as much as possible and separate out this
+    process. In addition, any data migration would be made idempotent.
 - Testing
-- Cost
+- Cost (when deploying a production system)
 
-At this time, and for this tech test, PostgreSQL is therefore not deemed
-necessary. However, when applied in a production system, it would be good to
-consider and review the persistent data requirements of the system as well as
-the evolution of the data models going forward.
+For this tech test, PostgreSQL is not deemed necessary because Redis fully meets
+the objective and requirements (in some ways better than PostgreSQL - e.g.
+holding a seat) now and in the future. However, when applied in a production
+system, it would be good to consider and review the persistent data requirements
+of the system as well as the evolution of the data models going forward.
 
 With this is mind, the system **should account for any future changes** in the
 data store and also clients (for the same data store). This is covered in the
@@ -648,7 +659,7 @@ The above should not pose an issue in the short and medium term so it is
 recommended to stick with this approach as it will be the most simple and
 therefore, maintainable.
 
-#### If there is an issue in the Node,js processing
+#### If there is an issue in the Node.js processing
 
 However, if there is an issue, then a list-based approach should be considered
 that minimises work on Node.js servers. Rather than defining individual keys,
@@ -661,9 +672,9 @@ an example is when the held seat expires. To do this, one can configure
 keyspaces events: `notify-keyspace-events` and listen for the expiry event:
 `EX`.
 
-This can be achieved in Node.js by setting this up a redis publish and
-subscription channel and utilising the stream event APIs. When the publisher
-channel is ready, define business logic in the subscriber instance to react to
+This can be achieved in Node.js by setting up redis publish and subscription
+channels and utilising the stream event APIs. When the publisher channel is
+ready, business logic defined in the subscriber instance would then react to
 expiry channel messages. When an expires message is received, the system will
 extract the information and make the associated event seat available again.
 
@@ -749,17 +760,18 @@ required:
 As defined in the requirements, the user is identified by a UUID. In a
 production setting, this would be identified by a more secure approach such as a
 [JWT](https://jwt.io/). However, in the interests of time and simplicity, the
-user will be identified by the contents of the base64 encoded API token in the
-request headers. For example:
+user will be identified by the contents of the base64 encoded Bearer token in
+the request headers. For example:
 
 | Header name     | Header value                                              | User ID                                |
 | --------------- | --------------------------------------------------------- | -------------------------------------- |
 | `authorization` | `Bearer NmU4NTllMjgtODZjMy00ZWI5LTk2NzQtZjQ4YWM4OWNjMWM1` | `6e859e28-86c3-4eb9-9674-f48ac89cc1c5` |
 
 No authorization will be implemented at this time, but this would be considered
-for a production system. In this case, a permissions system would be used and a
-strong convention for how what these permissions look like would be a critical
-part of the solution.
+for a production system (e.g. admins would create events and users would reserve
+seats). In this case, a permissions system would be used and a strong convention
+for how what these permissions look like would be a critical part of the
+solution.
 
 ### Validation
 
@@ -787,7 +799,8 @@ A logger instance will be defined and made available in the following contexts:
 This will include a correlation ID which is crucial in identifying relevant logs
 for a request (even across multiple systems). In addition, structured logging
 would be implemented as it brings huge searchability benefits as well as the
-ability to connect traces with logs.
+ability to connect traces with logs and create logs-based metrics (budget
+permitting).
 
 #### OpenTelemetry
 
@@ -810,12 +823,12 @@ following reasons:
 > **Note:** to account for time constraints, the main focus will be in-memory
 > integrations tests.
 
-In terms of testing this API, a trophy testing pattern will be used to provide a
+In terms of testing this API, a testing trophy pattern will be used to provide a
 good balance between amount of tests one needs to write vs confidence the tests
 give us in going to production. By focussing on in-memory integration tests
 (calling the endpoint as realistically as possible but any integrations (such as
-Redis) are mocked) and ensuring high test coverage, the confidence in the final
-solution will be high.
+Redis) are realistically mocked/intercepted) and ensuring high test coverage,
+the confidence in the final solution will be high.
 
 For the test framework/runner, the
 [Node.js test](https://nodejs.org/api/test.html) runner could be used but it
@@ -825,7 +838,8 @@ alternative, [`jest`](https://jestjs.io/docs/getting-started) is the next best
 option as it has a stable API, supports TypeScript easily and has everything we
 need.
 
-The AAA testing pattern will be used:
+The AAA testing pattern will be used as it a simple and clean way of defining
+and structuring tests:
 
 - Arrange
 - Act
@@ -960,11 +974,11 @@ endpoint:
 - Hold an available Seat for a User
 - Permanently reserve an available Seat for a User
 
-Use a test-driven approach to write this business logic.
+Use a test-driven approach to develop this business logic.
 
 ### Authentication and Authorization
 
-Implement the authentication only using NestJS as discussed in the exploration.
+Implement authentication-only using NestJS as discussed in the exploration.
 
 ### Error handling
 
@@ -991,6 +1005,9 @@ monitoring will go in a production system.
 
 Implement the in-memory integration testing as discussed in the exploration.
 Ensure that sufficient coverage achieved when the tests are run.
+
+For the test runner/framework, [`jest`](https://jestjs.io/docs/getting-started)
+will be used.
 
 ### Developer Tooling
 
